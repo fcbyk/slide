@@ -1,10 +1,12 @@
 {
-  "name": "fcbyk-web-ui",
-  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
-    "build": "vite build && rm -rf ../src/bykslide/dist && mv dist ../src/bykslide/"
+    "install:server":"pip install -e server",
+    "build:web": "vite build",
+    "build:server":"python3 -m build server --outdir dist",
+    "check:server":"twine check dist/*",
+    "build": "npm run build:web && npm run build:server"
   },
   "dependencies": {
     "@fontsource/space-mono": "^5.2.9",

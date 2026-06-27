@@ -1,0 +1,14 @@
+{
+  "$var": {
+    "github_url": "https://github.com/fcbyk/slide/releases/download/v{version}",
+    "version": "2026.6.27"
+  },
+  "slide": {
+    "pip": ["byk-slide @ {github_url}/byk_slide-{version}-py3-none-any.whl"],
+    "command": {
+      "type": "py-module",
+      "entry": "bykslide.cli",
+      "desc": "control slides via mobile web page"
+    }
+  }
+}

@@ -1,6 +1,0 @@
-{
-    "$priority": -1,
-    "test":"pytest -q",
-    "build":"python3 -m build",
-    "check":"twine check dist/*"
-}

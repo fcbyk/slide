@@ -8,6 +8,10 @@ export default defineConfig({
     tailwindcss(),
     vue()
   ],
+  build: {
+    outDir: 'server/src/bykslide/dist',
+    emptyOutDir: true,
+  },
   server: {
     proxy: {
       '/api': {
