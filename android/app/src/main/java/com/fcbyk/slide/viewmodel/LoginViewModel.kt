@@ -120,4 +120,9 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
     }
+
+    /** 重置登录状态（退出登录后调用） */
+    fun resetLoginState() {
+        _uiState.value = _uiState.value.copy(isLoggedIn = false, isLoading = false, errorMessage = null)
+    }
 }

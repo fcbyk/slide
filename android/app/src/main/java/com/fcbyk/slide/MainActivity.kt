@@ -9,9 +9,12 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.Crossfade
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.fcbyk.slide.ui.screen.LoginScreen
@@ -19,6 +22,7 @@ import com.fcbyk.slide.ui.screen.QrScannerScreen
 import com.fcbyk.slide.ui.screen.TouchpadScreen
 import com.fcbyk.slide.ui.theme.SlideTheme
 import com.fcbyk.slide.viewmodel.LoginViewModel
+import com.fcbyk.slide.viewmodel.TouchpadViewModel
 
 class MainActivity : ComponentActivity() {
 
@@ -36,25 +40,50 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         setContent {
-            val viewModel: LoginViewModel = viewModel()
-            val state by viewModel.uiState.collectAsState()
+            val loginViewModel: LoginViewModel = viewModel()
+            val loginState by loginViewModel.uiState.collectAsState()
             val scanning by showScannerState
 
-            SlideTheme(darkTheme = state.isDarkMode) {
-                Crossfade(targetState = scanning to state.isLoggedIn) { (scanMode, loggedIn) ->
+            SlideTheme(darkTheme = loginState.isDarkMode) {
+                Crossfade(
+                    targetState = scanning to loginState.isLoggedIn,
+                    modifier = Modifier.fillMaxSize()
+                ) { (scanMode, loggedIn) ->
                     when {
                         scanMode -> QrScannerScreen(
-                            onResult = { url -> handleScanResult(url, viewModel) },
+                            onResult = { url -> handleScanResult(url, loginViewModel) },
                             onClose = { showScanner = false }
                         )
-                        loggedIn -> TouchpadScreen(serverUrl = state.serverUrl)
+                        loggedIn -> {
+                            val touchpadViewModel: TouchpadViewModel = viewModel()
+                            val touchpadState by touchpadViewModel.uiState.collectAsState()
+
+                            LaunchedEffect(loginState.serverUrl) {
+                                touchpadViewModel.init(loginState.serverUrl)
+                            }
+
+                            // 监听退出登录
+                            LaunchedEffect(touchpadState.isLoggedIn) {
+                                if (!touchpadState.isLoggedIn) {
+                                    loginViewModel.resetLoginState()
+                                }
+                            }
+
+                            TouchpadScreen(
+                                state = touchpadState,
+                                onLogout = { touchpadViewModel.logout() },
+                                onSendClick = { touchpadViewModel.sendClick() },
+                                onNext = { touchpadViewModel.nextSlide() },
+                                onPrev = { touchpadViewModel.prevSlide() },
+                            )
+                        }
                         else -> LoginScreen(
-                            state = state,
-                            onServerUrlChange = { viewModel.setServerUrl(it) },
-                            onPasswordChange = { viewModel.setPassword(it) },
-                            onLogin = { viewModel.login() },
+                            state = loginState,
+                            onServerUrlChange = { loginViewModel.setServerUrl(it) },
+                            onPasswordChange = { loginViewModel.setPassword(it) },
+                            onLogin = { loginViewModel.login() },
                             onScanClick = { requestCamera() },
-                            onToggleDarkMode = { viewModel.toggleDarkMode() }
+                            onToggleDarkMode = { loginViewModel.toggleDarkMode() }
                         )
                     }
                 }

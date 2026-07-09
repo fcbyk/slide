@@ -42,6 +42,8 @@ object ApiClient {
 
     private val JSON = "application/json; charset=utf-8".toMediaType()
 
+    // ===================== 认证相关 =====================
+
     /** 密码登录 */
     suspend fun login(serverUrl: String, password: String): LoginResult = withContext(Dispatchers.IO) {
         val jsonBody = JSONObject().apply { put("password", password) }
@@ -84,6 +86,76 @@ object ApiClient {
             LoginResult.Error("网络错误 [${e.javaClass.simpleName}]\n${e.message ?: ""}")
         }
     }
+
+    /** 检查认证状态，同时测量延迟 */
+    suspend fun checkAuth(serverUrl: String): ApiCallResult = withContext(Dispatchers.IO) {
+        val start = System.currentTimeMillis()
+        try {
+            val request = Request.Builder().url("$serverUrl/api/check_auth").get().build()
+            val response = client.newCall(request).execute()
+            val elapsed = System.currentTimeMillis() - start
+            if (response.isSuccessful) {
+                val body = response.body?.string() ?: return@withContext ApiCallResult(false, elapsed)
+                val json = JSONObject(body)
+                val authenticated = json.optJSONObject("data")?.optBoolean("authenticated") ?: false
+                ApiCallResult(authenticated, elapsed)
+            } else {
+                ApiCallResult(false, elapsed)
+            }
+        } catch (e: Exception) {
+            val elapsed = System.currentTimeMillis() - start
+            ApiCallResult(false, elapsed)
+        }
+    }
+
+    /** 退出登录 */
+    suspend fun logout(serverUrl: String) = withContext(Dispatchers.IO) {
+        try {
+            val request = Request.Builder()
+                .url("$serverUrl/api/logout")
+                .post("{}".toRequestBody(JSON))
+                .build()
+            client.newCall(request).execute()
+        } catch (_: Exception) {
+            // 静默处理
+        }
+    }
+
+    // ===================== PPT 控制 =====================
+
+    /** 下一页 */
+    suspend fun nextSlide(serverUrl: String): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val request = Request.Builder().url("$serverUrl/api/next").post("{}".toRequestBody(JSON)).build()
+            client.newCall(request).execute().isSuccessful
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    /** 上一页 */
+    suspend fun prevSlide(serverUrl: String): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val request = Request.Builder().url("$serverUrl/api/prev").post("{}".toRequestBody(JSON)).build()
+            client.newCall(request).execute().isSuccessful
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    // ===================== 鼠标控制 =====================
+
+    /** 鼠标左键点击 */
+    suspend fun mouseClick(serverUrl: String): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val request = Request.Builder().url("$serverUrl/api/mouse/click").post("{}".toRequestBody(JSON)).build()
+            client.newCall(request).execute().isSuccessful
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    // ===================== 内部方法 =====================
 
     private fun executeRequest(request: Request): LoginResult = try {
         val response = client.newCall(request).execute()
@@ -130,3 +202,8 @@ sealed class LoginResult {
     data object Success : LoginResult()
     data class Error(val message: String) : LoginResult()
 }
+
+data class ApiCallResult(
+    val success: Boolean,
+    val latency: Long, // ms
+)
