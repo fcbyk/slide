@@ -38,8 +38,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -137,6 +139,8 @@ private fun HeaderBar(
     onLogout: () -> Unit,
 ) {
     val surfaceColor = MaterialTheme.colorScheme.surface
+    val haptic = LocalHapticFeedback.current
+    val vibrate: () -> Unit = remember { { haptic.performHapticFeedback(HapticFeedbackType.LongPress) } }
 
     Row(
         modifier = Modifier
@@ -169,7 +173,7 @@ private fun HeaderBar(
                         if (isDragMode) Primary else MaterialTheme.colorScheme.outline,
                         RoundedCornerShape(12.dp)
                     )
-                    .clickable { onToggleDragMode() },
+                    .clickable { vibrate(); onToggleDragMode() },
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
@@ -185,7 +189,7 @@ private fun HeaderBar(
                     .clip(RoundedCornerShape(12.dp))
                     .background(surfaceColor)
                     .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(12.dp))
-                    .clickable { onToggleDarkMode() },
+                    .clickable { vibrate(); onToggleDarkMode() },
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
@@ -201,7 +205,7 @@ private fun HeaderBar(
                     .clip(RoundedCornerShape(12.dp))
                     .background(surfaceColor)
                     .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(12.dp))
-                    .clickable { onLogout() },
+                    .clickable { vibrate(); onLogout() },
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
@@ -304,6 +308,8 @@ private fun TouchpadArea(
     onScroll: (Float, Float) -> Unit,
 ) {
     val scope = rememberCoroutineScope()
+    val haptic = LocalHapticFeedback.current
+    val vibrate: () -> Unit = remember { { haptic.performHapticFeedback(HapticFeedbackType.LongPress) } }
 
     // 手势状态（在 remember 中保持，不受 recomposition 影响）
     val gestureState = remember {
@@ -354,7 +360,7 @@ private fun TouchpadArea(
                                 handleRelease(
                                     gestureState, currentCount, now,
                                     onClick, onStopFlush,
-                                    onMouseUp, onRightClick, scope
+                                    onMouseUp, onRightClick, vibrate, scope
                                 )
                             }
                             else -> {}
@@ -562,6 +568,7 @@ private fun handleRelease(
     onStopFlush: () -> Unit,
     onMouseUp: () -> Unit,
     onRightClick: () -> Unit,
+    vibrate: () -> Unit,
     scope: kotlinx.coroutines.CoroutineScope,
 ) {
     // 还有手指在屏幕上（如双指逐个抬起），暂不处理，等待全部抬起
@@ -585,6 +592,7 @@ private fun handleRelease(
                 1 -> {
                     if (gs.isSecondTapCandidate) {
                         // 双击
+                        vibrate()
                         onClick()
                         onClick()
                         gs.lastTapTime = now
@@ -593,6 +601,7 @@ private fun handleRelease(
                         // 单击 - 延迟 200ms 发送，等待双击判定
                         gs.pendingClickJob = scope.launch {
                             delay(DOUBLE_TAP_INTERVAL)
+                            vibrate()
                             onClick()
                         }
                         gs.lastTapTime = now
@@ -601,6 +610,7 @@ private fun handleRelease(
                 }
                 2 -> {
                     if (!gs.twoFingerMoved) {
+                        vibrate()
                         onRightClick()
                         gs.lastTapWasClick = false
                     }
@@ -626,6 +636,9 @@ private fun BottomControls(
     onPrev: () -> Unit,
     onNext: () -> Unit,
 ) {
+    val haptic = LocalHapticFeedback.current
+    val vibrate: () -> Unit = remember { { haptic.performHapticFeedback(HapticFeedbackType.LongPress) } }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -637,7 +650,7 @@ private fun BottomControls(
             text = "上一页",
             subText = "PREVIOUS",
             isPrimary = false,
-            onClick = onPrev,
+            onClick = { vibrate(); onPrev() },
             modifier = Modifier.weight(1f),
         )
 
@@ -646,7 +659,7 @@ private fun BottomControls(
             text = "下一页",
             subText = "NEXT SLIDE",
             isPrimary = true,
-            onClick = onNext,
+            onClick = { vibrate(); onNext() },
             modifier = Modifier.weight(1f),
         )
     }

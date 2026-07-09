@@ -4,12 +4,14 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
+import android.view.KeyEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -31,9 +33,29 @@ class MainActivity : ComponentActivity() {
         get() = showScannerState.value
         set(v) { showScannerState.value = v }
 
+    /** 音量键回调，仅登录后生效，未设置时走系统默认行为 */
+    private var onVolumeKey: ((keyCode: Int) -> Unit)? = null
+
     private val cameraPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted -> if (granted) showScanner = true }
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        val handler = onVolumeKey
+        if (handler != null && event.action == KeyEvent.ACTION_DOWN) {
+            when (event.keyCode) {
+                KeyEvent.KEYCODE_VOLUME_UP -> {
+                    handler(KeyEvent.KEYCODE_VOLUME_UP)
+                    return true
+                }
+                KeyEvent.KEYCODE_VOLUME_DOWN -> {
+                    handler(KeyEvent.KEYCODE_VOLUME_DOWN)
+                    return true
+                }
+            }
+        }
+        return super.dispatchKeyEvent(event)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -60,6 +82,17 @@ class MainActivity : ComponentActivity() {
 
                             LaunchedEffect(loginState.serverUrl) {
                                 touchpadViewModel.init(loginState.serverUrl)
+                            }
+
+                            // 注册音量键翻页：上键→上一页，下键→下一页
+                            DisposableEffect(Unit) {
+                                onVolumeKey = { keyCode ->
+                                    when (keyCode) {
+                                        KeyEvent.KEYCODE_VOLUME_UP -> touchpadViewModel.prevSlide()
+                                        KeyEvent.KEYCODE_VOLUME_DOWN -> touchpadViewModel.nextSlide()
+                                    }
+                                }
+                                onDispose { onVolumeKey = null }
                             }
 
                             // 监听退出登录
