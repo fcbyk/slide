@@ -71,6 +71,7 @@ fun TouchpadScreen(
     onNext: () -> Unit,
     onPrev: () -> Unit,
     onToggleDragMode: () -> Unit,
+    onEnterStealthMode: () -> Unit,
     onAccumulateMove: (Float, Float) -> Unit,
     onStartFlush: () -> Unit,
     onStopFlush: () -> Unit,
@@ -82,48 +83,66 @@ fun TouchpadScreen(
     onToggleDarkMode: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .statusBarsPadding(),
-    ) {
-        // ==================== 顶部栏 ====================
-        HeaderBar(
-            connectionStatus = state.connectionStatus,
-            latency = state.latency,
+    if (state.isStealthMode) {
+        // ==================== 息屏模式：纯黑全屏触摸板 ====================
+        TouchpadArea(
             isDragMode = state.isDragMode,
-            isDarkMode = isDarkMode,
-            onToggleDragMode = onToggleDragMode,
-            onToggleDarkMode = onToggleDarkMode,
-            onLogout = onLogout,
+            onClick = onSendClick,
+            onAccumulateMove = onAccumulateMove,
+            onStartFlush = onStartFlush,
+            onStopFlush = onStopFlush,
+            onMouseDown = onMouseDown,
+            onMouseUp = onMouseUp,
+            onRightClick = onRightClick,
+            onScroll = onScroll,
+            isStealth = true,
         )
-
-        // ==================== 触摸板区域 ====================
-        Box(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+    } else {
+        Column(
+            modifier = modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+                .statusBarsPadding(),
         ) {
-            TouchpadArea(
+            // ==================== 顶部栏 ====================
+            HeaderBar(
+                connectionStatus = state.connectionStatus,
+                latency = state.latency,
                 isDragMode = state.isDragMode,
-                onClick = onSendClick,
-                onAccumulateMove = onAccumulateMove,
-                onStartFlush = onStartFlush,
-                onStopFlush = onStopFlush,
-                onMouseDown = onMouseDown,
-                onMouseUp = onMouseUp,
-                onRightClick = onRightClick,
-                onScroll = onScroll,
+                isDarkMode = isDarkMode,
+                onToggleDragMode = onToggleDragMode,
+                onToggleDarkMode = onToggleDarkMode,
+                onEnterStealthMode = onEnterStealthMode,
+                onLogout = onLogout,
+            )
+
+            // ==================== 触摸板区域 ====================
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+            ) {
+                TouchpadArea(
+                    isDragMode = state.isDragMode,
+                    onClick = onSendClick,
+                    onAccumulateMove = onAccumulateMove,
+                    onStartFlush = onStartFlush,
+                    onStopFlush = onStopFlush,
+                    onMouseDown = onMouseDown,
+                    onMouseUp = onMouseUp,
+                    onRightClick = onRightClick,
+                    onScroll = onScroll,
+                    isStealth = false,
+                )
+            }
+
+            // ==================== 底部按钮 ====================
+            BottomControls(
+                onPrev = onPrev,
+                onNext = onNext,
             )
         }
-
-        // ==================== 底部按钮 ====================
-        BottomControls(
-            onPrev = onPrev,
-            onNext = onNext,
-        )
     }
 }
 
@@ -136,6 +155,7 @@ private fun HeaderBar(
     isDarkMode: Boolean,
     onToggleDragMode: () -> Unit,
     onToggleDarkMode: () -> Unit,
+    onEnterStealthMode: () -> Unit,
     onLogout: () -> Unit,
 ) {
     val surfaceColor = MaterialTheme.colorScheme.surface
@@ -178,6 +198,22 @@ private fun HeaderBar(
             ) {
                 Text(
                     text = "✋",
+                    fontSize = 16.sp,
+                )
+            }
+
+            // 息屏模式
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(surfaceColor)
+                    .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(12.dp))
+                    .clickable { vibrate(); onEnterStealthMode() },
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = "🌑",
                     fontSize = 16.sp,
                 )
             }
@@ -306,6 +342,7 @@ private fun TouchpadArea(
     onMouseUp: () -> Unit,
     onRightClick: () -> Unit,
     onScroll: (Float, Float) -> Unit,
+    isStealth: Boolean = false,
 ) {
     val scope = rememberCoroutineScope()
     val haptic = LocalHapticFeedback.current
@@ -319,9 +356,13 @@ private fun TouchpadArea(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .clip(RoundedCornerShape(24.dp))
-            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.5f))
-            .border(2.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f), RoundedCornerShape(24.dp))
+            .then(
+                if (isStealth) Modifier.background(Color.Black)
+                else Modifier
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.5f))
+                    .border(2.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f), RoundedCornerShape(24.dp))
+            )
             .pointerInput(isDragMode) {
                 awaitPointerEventScope {
                     while (true) {
@@ -375,63 +416,65 @@ private fun TouchpadArea(
             },
         contentAlignment = Alignment.Center,
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-        ) {
-            Text(
-                text = "👆",
-                fontSize = 40.sp,
-                textAlign = TextAlign.Center,
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Text(
-                text = if (isDragMode) "拖拽模式已开启"
-                else "滑动移动光标 · 点击左键",
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f),
-                textAlign = TextAlign.Center,
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Text(
-                text = if (isDragMode) "单指拖拽 · 双指滚动"
-                else "双指点击右键 · 双指滑动滚轮",
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.25f),
-                textAlign = TextAlign.Center,
-            )
-        }
-
-        // 右下角标签
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(16.dp)
-                .clip(RoundedCornerShape(20.dp))
-                .background(MaterialTheme.colorScheme.surface)
-                .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(20.dp))
-                .padding(horizontal = 12.dp, vertical = 6.dp),
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .size(8.dp)
-                        .clip(CircleShape)
-                        .background(if (isDragMode) Primary else Green),
-                )
-                Spacer(modifier = Modifier.width(6.dp))
+        if (!isStealth) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+            ) {
                 Text(
-                    text = if (isDragMode) "拖拽模式" else "触控区域",
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 0.5.sp,
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f),
+                    text = "👆",
+                    fontSize = 40.sp,
+                    textAlign = TextAlign.Center,
                 )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    text = if (isDragMode) "拖拽模式已开启"
+                    else "滑动移动光标 · 点击左键",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f),
+                    textAlign = TextAlign.Center,
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = if (isDragMode) "单指拖拽 · 双指滚动"
+                    else "双指点击右键 · 双指滑动滚轮",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.25f),
+                    textAlign = TextAlign.Center,
+                )
+            }
+
+            // 右下角标签
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(16.dp)
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(MaterialTheme.colorScheme.surface)
+                    .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(20.dp))
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(8.dp)
+                            .clip(CircleShape)
+                            .background(if (isDragMode) Primary else Green),
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = if (isDragMode) "拖拽模式" else "触控区域",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 0.5.sp,
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f),
+                    )
+                }
             }
         }
     }

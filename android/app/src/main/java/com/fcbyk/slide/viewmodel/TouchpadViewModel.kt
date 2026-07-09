@@ -23,6 +23,7 @@ data class TouchpadUiState(
     val latency: Long = 0,
     val isLoggedIn: Boolean = true,
     val isDragMode: Boolean = false,
+    val isStealthMode: Boolean = false,
 )
 
 class TouchpadViewModel(application: Application) : AndroidViewModel(application) {
@@ -75,6 +76,16 @@ class TouchpadViewModel(application: Application) : AndroidViewModel(application
     /** 切换拖拽模式 */
     fun toggleDragMode() {
         _uiState.value = _uiState.value.copy(isDragMode = !_uiState.value.isDragMode)
+    }
+
+    /** 进入息屏模式（纯黑触摸板，音量键翻页，通知栏退出） */
+    fun enterStealthMode() {
+        _uiState.value = _uiState.value.copy(isStealthMode = true)
+    }
+
+    /** 退出息屏模式 */
+    fun exitStealthMode() {
+        _uiState.value = _uiState.value.copy(isStealthMode = false)
     }
 
     // ==================== 鼠标操作 ====================
