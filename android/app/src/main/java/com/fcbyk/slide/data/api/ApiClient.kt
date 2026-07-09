@@ -145,10 +145,74 @@ object ApiClient {
 
     // ===================== 鼠标控制 =====================
 
+    /** 鼠标移动 */
+    suspend fun mouseMove(serverUrl: String, dx: Float, dy: Float): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val body = JSONObject().apply {
+                put("dx", dx.toInt())
+                put("dy", dy.toInt())
+            }
+            val request = Request.Builder()
+                .url("$serverUrl/api/mouse/move")
+                .post(body.toString().toRequestBody(JSON))
+                .build()
+            client.newCall(request).execute().isSuccessful
+        } catch (_: Exception) {
+            false
+        }
+    }
+
     /** 鼠标左键点击 */
     suspend fun mouseClick(serverUrl: String): Boolean = withContext(Dispatchers.IO) {
         try {
             val request = Request.Builder().url("$serverUrl/api/mouse/click").post("{}".toRequestBody(JSON)).build()
+            client.newCall(request).execute().isSuccessful
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    /** 鼠标按下 */
+    suspend fun mouseDown(serverUrl: String): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val request = Request.Builder().url("$serverUrl/api/mouse/down").post("{}".toRequestBody(JSON)).build()
+            client.newCall(request).execute().isSuccessful
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    /** 鼠标释放 */
+    suspend fun mouseUp(serverUrl: String): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val request = Request.Builder().url("$serverUrl/api/mouse/up").post("{}".toRequestBody(JSON)).build()
+            client.newCall(request).execute().isSuccessful
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    /** 鼠标右键点击 */
+    suspend fun mouseRightClick(serverUrl: String): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val request = Request.Builder().url("$serverUrl/api/mouse/rightclick").post("{}".toRequestBody(JSON)).build()
+            client.newCall(request).execute().isSuccessful
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    /** 鼠标滚轮 */
+    suspend fun mouseScroll(serverUrl: String, dx: Float, dy: Float): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val body = JSONObject().apply {
+                put("dx", dx.toInt())
+                put("dy", dy.toInt())
+            }
+            val request = Request.Builder()
+                .url("$serverUrl/api/mouse/scroll")
+                .post(body.toString().toRequestBody(JSON))
+                .build()
             client.newCall(request).execute().isSuccessful
         } catch (_: Exception) {
             false

@@ -75,6 +75,16 @@ class MainActivity : ComponentActivity() {
                                 onSendClick = { touchpadViewModel.sendClick() },
                                 onNext = { touchpadViewModel.nextSlide() },
                                 onPrev = { touchpadViewModel.prevSlide() },
+                                onToggleDragMode = { touchpadViewModel.toggleDragMode() },
+                                onAccumulateMove = { dx, dy -> touchpadViewModel.accumulateMove(dx, dy) },
+                                onStartFlush = { touchpadViewModel.startFlush() },
+                                onStopFlush = { touchpadViewModel.stopFlush() },
+                                onMouseDown = { touchpadViewModel.sendMouseDown() },
+                                onMouseUp = { touchpadViewModel.sendMouseUp() },
+                                onRightClick = { touchpadViewModel.sendRightClick() },
+                                onScroll = { dx, dy -> touchpadViewModel.sendScroll(dx, dy) },
+                                isDarkMode = loginState.isDarkMode,
+                                onToggleDarkMode = { loginViewModel.toggleDarkMode() },
                             )
                         }
                         else -> LoginScreen(
