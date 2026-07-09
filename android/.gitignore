@@ -1,0 +1,19 @@
+*.iml
+.gradle
+/local.properties
+/.idea
+.DS_Store
+/build
+app/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+
+# Auto-generated
+gradle/gradle-daemon-jvm.properties
+
+# Gradle wrapper (keep properties, ignore binary and scripts)
+gradle/wrapper/gradle-wrapper.jar
+gradlew
+gradlew.bat
