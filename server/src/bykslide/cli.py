@@ -1,12 +1,12 @@
 import threading
 
 import click
-from byksdk import (
+import webbrowser
+from .utils import (
     check_port,
     copy_to_clipboard,
     echo_network_urls,
     get_private_networks,
-    open_browser,
     wait_for_server_ready,
 )
 
@@ -55,7 +55,7 @@ def slide(port):
     # 等待服务器就绪后自动打开浏览器
     def _auto_open():
         if wait_for_server_ready(port):
-            open_browser(f"http://{local_ip}:{port}")
+            webbrowser.open(f"http://{local_ip}:{port}")
 
     threading.Thread(target=_auto_open, daemon=True).start()
 

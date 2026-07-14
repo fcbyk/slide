@@ -8,7 +8,7 @@ from pathlib import Path
 
 from flask import request, session, current_app, redirect
 from flask_socketio import SocketIO, disconnect
-from byksdk import R, create_spa, get_private_networks
+from .utils import R, create_spa, get_private_networks
 from .service import SlideService
 
 
