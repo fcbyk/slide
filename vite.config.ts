@@ -9,7 +9,7 @@ export default defineConfig({
     vue()
   ],
   build: {
-    outDir: 'server/src/bykslide/dist',
+    outDir: 'server/src/slide/dist',
     emptyOutDir: true,
   },
   server: {
