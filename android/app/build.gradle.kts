@@ -11,8 +11,8 @@ android {
         applicationId = "com.fcbyk.slide"
         minSdk = 24
         targetSdk = 36
-        versionCode = 20260627
-        versionName = "2026.6.27"
+        versionCode = 20261122
+        versionName = "2026.11.22"
     }
 
     buildTypes {

@@ -1,5 +1,6 @@
 package com.fcbyk.slide.ui.screen
 
+import android.util.Log
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.Preview
@@ -52,68 +53,85 @@ fun QrScannerScreen(
     var lensFacing by remember { mutableStateOf(CameraSelector.LENS_FACING_BACK) }
     var scanResult by remember { mutableStateOf<String?>(null) }
 
+    val previewView = remember { PreviewView(context) }
+    val cameraProviderFuture = remember { ProcessCameraProvider.getInstance(context) }
+
+    // 前后摄切换时重新绑定；离开扫码页时释放相机、分析线程和识别器
+    DisposableEffect(lensFacing) {
+        val executor = Executors.newSingleThreadExecutor()
+        val barcodeScanner = BarcodeScanning.getClient()
+        var cameraProvider: ProcessCameraProvider? = null
+        var disposed = false
+
+        val listener = Runnable {
+            if (disposed) return@Runnable
+            cameraProvider = try {
+                cameraProviderFuture.get()
+            } catch (e: Exception) {
+                Log.e("QrScanner", "获取相机失败", e)
+                return@Runnable
+            }
+
+            val preview = Preview.Builder().build().also {
+                it.surfaceProvider = previewView.surfaceProvider
+            }
+            val imageAnalysis = ImageAnalysis.Builder()
+                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                .build()
+
+            imageAnalysis.setAnalyzer(executor) { imageProxy ->
+                val mediaImage = imageProxy.image
+                if (mediaImage != null) {
+                    val image = InputImage.fromMediaImage(
+                        mediaImage, imageProxy.imageInfo.rotationDegrees
+                    )
+                    barcodeScanner.process(image)
+                        .addOnSuccessListener { barcodes ->
+                            for (barcode in barcodes) {
+                                if (barcode.valueType == Barcode.TYPE_URL ||
+                                    barcode.valueType == Barcode.TYPE_TEXT
+                                ) {
+                                    val value = barcode.rawValue
+                                    if (value != null && value.startsWith("http")) {
+                                        scanResult = value
+                                        return@addOnSuccessListener
+                                    }
+                                }
+                            }
+                        }
+                        .addOnCompleteListener { imageProxy.close() }
+                } else {
+                    imageProxy.close()
+                }
+            }
+
+            val cameraSelector = CameraSelector.Builder()
+                .requireLensFacing(lensFacing)
+                .build()
+
+            try {
+                cameraProvider?.unbindAll()
+                cameraProvider?.bindToLifecycle(
+                    lifecycleOwner, cameraSelector, preview, imageAnalysis
+                )
+            } catch (e: Exception) {
+                Log.e("QrScanner", "绑定相机失败", e)
+            }
+        }
+        cameraProviderFuture.addListener(listener, ContextCompat.getMainExecutor(context))
+
+        onDispose {
+            disposed = true
+            runCatching { cameraProvider?.unbindAll() }
+            barcodeScanner.close()
+            executor.shutdown()
+        }
+    }
+
     Box(modifier = modifier.fillMaxSize().background(Color.Black)) {
         // 相机预览
         AndroidView(
-            factory = { ctx ->
-                val previewView = PreviewView(ctx)
-                val cameraProviderFuture = ProcessCameraProvider.getInstance(ctx)
-                val executor = Executors.newSingleThreadExecutor()
-
-                cameraProviderFuture.addListener({
-                    val cameraProvider = cameraProviderFuture.get()
-                    val preview = Preview.Builder().build().also {
-                        it.surfaceProvider = previewView.surfaceProvider
-                    }
-
-                    val imageAnalysis = ImageAnalysis.Builder()
-                        .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-                        .build()
-
-                    val barcodeScanner = BarcodeScanning.getClient()
-
-                    imageAnalysis.setAnalyzer(executor) { imageProxy ->
-                        val mediaImage = imageProxy.image
-                        if (mediaImage != null) {
-                            val image = InputImage.fromMediaImage(
-                                mediaImage, imageProxy.imageInfo.rotationDegrees
-                            )
-                            barcodeScanner.process(image)
-                                .addOnSuccessListener { barcodes ->
-                                    for (barcode in barcodes) {
-                                        if (barcode.valueType == Barcode.TYPE_URL ||
-                                            barcode.valueType == Barcode.TYPE_TEXT
-                                        ) {
-                                            val value = barcode.rawValue
-                                            if (value != null && value.startsWith("http")) {
-                                                scanResult = value
-                                                return@addOnSuccessListener
-                                            }
-                                        }
-                                    }
-                                }
-                                .addOnCompleteListener {
-                                    imageProxy.close()
-                                }
-                        } else {
-                            imageProxy.close()
-                        }
-                    }
-
-                    val cameraSelector = CameraSelector.Builder()
-                        .requireLensFacing(lensFacing)
-                        .build()
-
-                    try {
-                        cameraProvider.unbindAll()
-                        cameraProvider.bindToLifecycle(
-                            lifecycleOwner, cameraSelector, preview, imageAnalysis
-                        )
-                    } catch (_: Exception) {}
-                }, ContextCompat.getMainExecutor(ctx))
-
-                previewView
-            },
+            factory = { previewView },
             modifier = Modifier.fillMaxSize()
         )
 
