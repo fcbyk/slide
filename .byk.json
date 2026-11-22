@@ -1,7 +1,5 @@
 {
-	"$paths": [
-		"${file_dir}\\.venv\\Scripts"
-	],
+	"$private": true,
 	"$var": {
 		"github": "https://github.com/fcbyk/slide/releases/download/dist",
 		"version": "2026.6.27"
@@ -11,14 +9,24 @@
 			"${github}/slide-${version}-py3-none-any.whl"
 		]
 	},
+	"$paths": [
+		"${file_dir}\\.venv\\Scripts"
+	],
+	"pyv": {
+		"$clone": false,
+		"install": "pip install -e server",
+		"uninstall": "pip uninstall -y slide"
+	},
 	"py": {
-		"$private": true,
+		"$paths": [],
 		"$clone": false,
 		"venv": "python -m venv .venv",
-		"install": ".venv\\Scripts\\pip.exe install -e server",
-		"uninstall": ".venv\\Scripts\\pip.exe uninstall -y slide"
+		"build": "python -m build server --outdir dist",
+		"check": "twine check dist/*",
+		"build:release": "pnpm run build && byk @.py.build"
 	},
 	"slide": {
+		"$private": false,
 		"$mode": "silent",
 		"$cmd": "python -m slide.cli",
 		"$description": "control slides via mobile web page"

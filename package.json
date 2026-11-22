@@ -2,10 +2,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
-    "build:web": "vite build",
-    "build:server":"python -m build server --outdir dist",
-    "check:server":"twine check dist/*",
-    "build": "pnpm run build:web && pnpm run build:server"
+    "build": "vite build"
   },
   "dependencies": {
     "@fontsource/space-mono": "^5.2.9",
